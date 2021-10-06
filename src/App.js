@@ -87,7 +87,7 @@ const particlesOptions = {
 const initialState = {
   input: '',
   imageUrl: '',
-  box: {},
+  boxes: [],
   route: 'signin',
   isSignedIn: false,
   user: {
@@ -120,21 +120,26 @@ class App extends Component {
   }
 
 
-  calculateFaceLocation = (data) => {
-    const box = data.outputs[0].data.regions[0].region_info.bounding_box;
-    const image = document.getElementById('inputimage')
-    const width = Number(image.width);
-    const height = Number(image.height);
-    return {
-      left: box.left_col * width,
-      top: box.top_row * height,
-      right: width - (box.right_col * width),
-      bottom: height - (box.bottom_row * height),
+  calculateFaceLocations = (data) => {
+    return data.outputs[0].data.regions.map(face => {
+      const clarifaiface = face.region_info.bounding_box;
+      const image = document.getElementById('inputimage')
+      const width = Number(image.width);
+      const height = Number(image.height);
+      return {
+        left: clarifaiface.left_col * width,
+        top: clarifaiface.top_row * height,
+        right: width - (clarifaiface.right_col * width),
+        bottom: height - (clarifaiface.bottom_row * height),
+      }
     }
+    )
+
+
   }
 
-  displayFaceBox = (box) => {
-    this.setState({ box: box });
+  displayFaceBoxes = (boxes) => {
+    this.setState({ boxes: boxes });
   }
 
   onInputChange = (event) => {
@@ -142,8 +147,7 @@ class App extends Component {
   }
   onPictureSubmit = () => {
     this.setState({ imageUrl: this.state.input })
-    console.log('url', this.state.imageUrl)
-    console.log('input', this.state.input)
+
     fetch('https://still-brook-25458.herokuapp.com/imageurl', {
       method: 'post',
       headers: { 'Content-Type': 'application/json' },
@@ -165,7 +169,7 @@ class App extends Component {
             })
             .catch(console.log)
         }
-        this.displayFaceBox(this.calculateFaceLocation(response));
+        this.displayFaceBoxes(this.calculateFaceLocations(response));
       })
       .catch(err => console.log(err));
   };
@@ -180,7 +184,7 @@ class App extends Component {
   }
 
   render() {
-    const { isSignedIn, imageUrl, route, box } = this.state;
+    const { isSignedIn, imageUrl, route, boxes } = this.state;
     return (
       <div className="App">
 
@@ -194,7 +198,7 @@ class App extends Component {
             <Logo />
             <Rank name={this.state.user.name} entries={this.state.user.entries} />
             <ImageLinkForm onInputChange={this.onInputChange} onPictureSubmit={this.onPictureSubmit} />
-            <FaceRecognition box={box} imageUrl={imageUrl} />
+            <FaceRecognition boxes={boxes} imageUrl={imageUrl} />
           </div>
           : (
             route === 'signin'
